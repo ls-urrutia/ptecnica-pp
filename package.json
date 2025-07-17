@@ -12,7 +12,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "db:create": "node database/create-tables.js",
-    "db:seed": "node database/seed.js"
+    "db:seed": "node database/seed.js",
+    "db:reset": "npm run db:create && npm run db:seed",
+    "test:basic": "node test/basic-test.js"
   },
   "keywords": ["api", "prueba_tecnica", "citas_medicas", "rest"],
   "author": "ls-urrutia",

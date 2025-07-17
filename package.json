@@ -1,16 +1,21 @@
 {
   "name": "ptecnica-pp",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "API REST para sistema de citas médicas",
+  "main": "src/app.js",
   "directories": {
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "db:create": "node database/create-tables.js",
+    "db:seed": "node database/seed.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["api", "prueba_tecnica", "citas_medicas", "rest"],
+  "author": "ls-urrutia",
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^6.0.0",

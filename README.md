@@ -13,6 +13,20 @@ Sistema completo de gestión de citas médicas desarrollado como API RESTful con
 - **Validaciones**: Horarios permitidos, disponibilidad y estado de pagos
 - **Frontend React**: Interfaz de usuario intuitiva y responsive
 
+
+#### Dashboard Principal
+![Dashboard Principal](https://github.com/user-attachments/assets/b0644808-2123-48ae-be5f-7042bddddce5)
+
+#### Login y Registro
+
+![Login](https://github.com/user-attachments/assets/a1ebd1cd-ac52-4298-8d64-66afb48b3e72)
+![Registro](https://github.com/user-attachments/assets/3fa2a581-b660-46ee-9729-48eb91664a79)
+
+
+
+
+
+
 ## Arquitectura del Sistema
 
 ```
@@ -400,6 +414,36 @@ npm run frontend
 
 **Listo** Las tablas se crearán automáticamente con Sequelize y los datos de prueba se insertarán al iniciar el servidor por primera vez.
 
+### Vista de Paciente
+
+#### Dashboard Paciente
+
+<img width="1496" height="395" alt="image" src="https://github.com/user-attachments/assets/0611360b-f456-4a10-ac7c-d63cb392c829" />
+
+#### Citas - Creación Cita
+<img width="1513" height="772" alt="image" src="https://github.com/user-attachments/assets/9eeaf9a5-85cf-4689-bb66-4c24712ce76a" />
+
+#### Citas - Creación Cita, captura N°2
+<img width="1315" height="344" alt="image" src="https://github.com/user-attachments/assets/4cdefae5-56e3-4791-98fb-f792755824b0" />
+
+#### Pagos - Proceso de pago (sandbox)
+
+<img width="1238" height="961" alt="image" src="https://github.com/user-attachments/assets/38b46746-1643-4734-b3d4-de6a90f16711" />
+
+
+### Vista de Médico
+
+#### Dashboard Médico
+
+<img width="1508" height="560" alt="image" src="https://github.com/user-attachments/assets/f7df5b46-6dbb-4b1e-9c50-08ca7b79cf23" />
+
+#### Gestión Citas (ver segun fecha - arriba derecha)
+<img width="1492" height="557" alt="image" src="https://github.com/user-attachments/assets/17a32404-255b-4fdc-8ca7-364513a1ba13" />
+
+#### Opciones para cita (pagada por cliente)
+<img width="1323" height="597" alt="image" src="https://github.com/user-attachments/assets/41034daf-b1ff-4742-a1cf-6c83cf4f8021" />
+
+
 ## Arquitectura de Base de Datos
 
 ### Configuración Automatizada con Sequelize
@@ -678,6 +722,9 @@ const verificarDisponibilidad = async (idMedico, fecha, hora) => {
   }
 };
 ```
+Captura:
+
+<img width="992" height="498" alt="image" src="https://github.com/user-attachments/assets/4fe5adb0-7d4f-404a-a938-f74e206b1158" />
 
 #### **3. Cita Pagada para Confirmar**
 
@@ -787,7 +834,7 @@ const validarHorarioAtencion = (hora) => {
 
 > **Resultado**: API RESTful completa con POO, validaciones, sistema de pagos sandbox y gestión de roles.
 
-### 🔒 Explicación del Hasheo de Contraseñas
+### Explicación del Hasheo de Contraseñas
 
 **¿Por qué bcrypt?**
 

@@ -2,42 +2,15 @@ const Usuario = require('./Usuario');
 const Cita = require('./Cita');
 const Pago = require('./Pago');
 
-/**
- * Configuración de asociaciones entre modelos
- * Patrón Repository para relaciones
- */
+// Definir asociaciones
+Usuario.hasMany(Cita, { foreignKey: 'idPaciente', as: 'citasPaciente' });
+Usuario.hasMany(Cita, { foreignKey: 'idMedico', as: 'citasMedico' });
 
-// Relaciones Usuario - Cita
-Usuario.hasMany(Cita, {
-  foreignKey: 'idPaciente',  
-  as: 'pacienteCitas'
-});
+Cita.belongsTo(Usuario, { foreignKey: 'idPaciente', as: 'paciente' });
+Cita.belongsTo(Usuario, { foreignKey: 'idMedico', as: 'medico' });
 
-Usuario.hasMany(Cita, {
-  foreignKey: 'idMedico',  
-  as: 'medicoCitas'
-});
-
-Cita.belongsTo(Usuario, {
-  foreignKey: 'idPaciente', 
-  as: 'paciente'
-});
-
-Cita.belongsTo(Usuario, {
-  foreignKey: 'idMedico',  
-  as: 'medico'
-});
-
-// Relaciones Cita - Pago
-Cita.hasMany(Pago, {
-  foreignKey: 'citaId',  
-  as: 'pagos'
-});
-
-Pago.belongsTo(Cita, {
-  foreignKey: 'citaId', 
-  as: 'cita'
-});
+Cita.hasMany(Pago, { foreignKey: 'citaId', as: 'pagos' });
+Pago.belongsTo(Cita, { foreignKey: 'citaId', as: 'cita' });
 
 module.exports = {
   Usuario,

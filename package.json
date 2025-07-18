@@ -14,7 +14,9 @@
     "db:create": "node database/create-tables.js",
     "db:seed": "node database/seed.js",
     "db:reset": "npm run db:create && npm run db:seed",
-    "test:basic": "node test/basic-test.js"
+    "test:basic": "node test/basic-test.js",
+    "frontend": "cd frontend && npm start",
+    "dev:all": "concurrently \"npm run dev\" \"npm run frontend\""
   },
   "keywords": [
     "api",
@@ -29,6 +31,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
     "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
@@ -41,6 +44,7 @@
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.14",
+    "concurrently": "^9.2.0",
     "jest": "^30.0.4",
     "nodemon": "^3.1.10",
     "supertest": "^7.1.3"

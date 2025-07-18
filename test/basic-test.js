@@ -1,6 +1,6 @@
 const sequelize = require('../src/config/database');
 const { Usuario, Cita, Pago } = require('../src/models');
-const PaymentService = require('../src/services/PaymentService');
+const PagoServicio = require('../src/services/PaymentService');
 
 /**
  * Pruebas básicas de funcionalidad
@@ -59,15 +59,15 @@ async function runBasicTests() {
     }
 
     // Test 7: Probar servicio de pagos
-    const paymentService = new PaymentService();
-    const paymentResult = await paymentService.processPayment({
+    const pagoServicio = new PagoServicio();
+    const paymentResult = await pagoServicio.processPayment({
       monto: 50.000,
       pagoMetodo: 'tarjeta_credito'
     });
     console.log(`Simulación de pago: ${paymentResult.success ? 'EXITOSO' : 'FALLIDO'}`);
 
     // Test 8: Verificar cita pagada
-    const isPaid = await paymentService.citaEstaPagada(1);
+    const isPaid = await pagoServicio.citaEstaPagada(1);
     console.log(`Cita ID 1 pagada: ${isPaid ? 'SÍ' : 'NO'}`);
 
     console.log('\n Todas las pruebas básicas completadas');

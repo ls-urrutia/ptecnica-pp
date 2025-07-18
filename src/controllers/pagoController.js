@@ -1,120 +1,103 @@
-const { Cita, Pago } = require('../models');
-const PaymentService = require('../services/PaymentService');
-const { validationResult } = require('express-validator');
+const { Pago, Cita, Usuario } = require('../models');
+const { v4: uuidv4 } = require('uuid');
 
 /**
  * Controlador de Pagos
- * Maneja el procesamiento de pagos de citas
+ * Maneja el procesamiento de pagos para las citas médicas
  */
 class PagoController {
-  constructor() {
-    this.paymentService = new PaymentService();
-  }
-
   /**
-   * Procesar pago de cita
+   * Procesar pago de una cita
    * @param {Object} req - Request object
    * @param {Object} res - Response object
    */
   static async procesarPago(req, res) {
     try {
-      // Validar errores de entrada
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          error: 'Datos inválidos',
-          details: errors.array()
-        });
-      }
-
-      const { citaId, pagoMetodo } = req.body;
+      const { citaId, pagoMetodo, monto } = req.body;
       const idPaciente = req.usuario.id;
 
-      // Verificar que la cita existe y pertenece al paciente
+      console.log('Procesando pago:', { citaId, pagoMetodo, monto, idPaciente });
+
+      // Validar que la cita existe y pertenece al paciente
       const cita = await Cita.findOne({
-        where: { id: citaId, idPaciente }
+        where: { 
+          id: citaId,
+          idPaciente: idPaciente,
+          estado: 'pendiente'
+        }
       });
 
       if (!cita) {
         return res.status(404).json({
           error: 'Cita no encontrada',
-          message: 'La cita no existe o no pertenece a este paciente'
+          message: 'La cita no existe o ya fue procesada'
         });
       }
 
-      // Verificar que la cita esté en estado pendiente
-      if (cita.estado !== 'pendiente') {
+      // Validar método de pago
+      const metodosValidos = ['tarjeta_credito', 'tarjeta_debito', 'transferencia_bancaria'];
+      if (!metodosValidos.includes(pagoMetodo)) {
         return res.status(400).json({
-          error: 'Estado de cita inválido',
-          message: 'Solo se pueden pagar citas en estado pendiente'
+          error: 'Método de pago inválido',
+          message: 'Selecciona un método de pago válido'
         });
       }
 
-      // Verificar si ya existe un pago completado
-      const pagoExistente = await Pago.findOne({
-        where: { 
-          citaId, 
-          pagoEstado: 'completado' 
-        }
-      });
-
-      if (pagoExistente) {
+      // Validar monto
+      if (Number(monto) !== Number(cita.monto)) {
         return res.status(400).json({
-          error: 'Cita ya pagada',
-          message: 'Esta cita ya ha sido pagada'
+          error: 'Monto incorrecto',
+          message: 'El monto no coincide con el de la cita'
         });
       }
 
-      const paymentService = new PaymentService();
+      // Simular procesamiento de pago
+      const resultadoPago = await PagoController.simularProcesamiento(pagoMetodo, monto);
 
-      // Crear registro de pago
-      const pago = await paymentService.createPayment({
-        citaId,
-        monto: cita.monto,
-        pagoMetodo
-      });
+      if (resultadoPago.exitoso) {
+        // Crear registro de pago exitoso
+        const pago = await Pago.create({
+          citaId,
+          monto,
+          pagoMetodo,
+          pagoEstado: 'completado',
+          transaccionId: uuidv4(),
+          fechaPagado: new Date(),
+          detallesRespuesta: JSON.stringify(resultadoPago.detalles)
+        });
 
-      // Procesar pago con el gateway
-      const paymentResult = await paymentService.processPayment({
-        monto: cita.monto,
-        pagoMetodo
-      });
-
-      // Actualizar estado del pago
-      await paymentService.updatePaymentStatus(pago.id, {
-        estado: paymentResult.success ? 'completado' : 'fallido',
-        transaccionId: paymentResult.transaccionId,
-        gatewayResponse: paymentResult.gatewayResponse
-      });
-
-      if (paymentResult.success) {
         // Actualizar estado de la cita
         await cita.update({ estado: 'pagado' });
 
-        res.json({
+        return res.status(200).json({
+          exitoso: true,
           message: 'Pago procesado exitosamente',
-          pago: {
-            id: pago.id,
-            monto: cita.monto,
-            estado: 'completado',
-            transaccionId: paymentResult.transaccionId
-          },
-          cita: {
-            id: cita.id,
-            estado: 'pagado'
-          }
+          pago,
+          transaccionId: pago.transaccionId
         });
       } else {
-        res.status(400).json({
-          error: 'Pago fallido',
-          message: 'El pago no pudo ser procesado',
-          details: paymentResult.gatewayResponse
+        // Pago fallido
+        const pago = await Pago.create({
+          citaId,
+          monto,
+          pagoMetodo,
+          pagoEstado: 'fallido',
+          transaccionId: uuidv4(),
+          fechaPagado: new Date(),
+          detallesRespuesta: JSON.stringify(resultadoPago.detalles)
+        });
+
+        return res.status(400).json({
+          exitoso: false,
+          message: resultadoPago.mensaje,
+          pago,
+          error: resultadoPago.error
         });
       }
 
     } catch (error) {
-      console.error('Error al procesar pago:', error);
-      res.status(500).json({
+      console.error('Error procesando pago:', error);
+      return res.status(500).json({
         error: 'Error interno del servidor',
         message: 'No se pudo procesar el pago'
       });
@@ -122,59 +105,163 @@ class PagoController {
   }
 
   /**
+   * Simular procesamiento de pago (Sandbox)
+   * @param {string} metodo - Método de pago
+   * @param {number} monto - Monto a procesar
+   * @returns {Promise<Object>}
+   */
+  static async simularProcesamiento(metodo, monto) {
+    // Simular latencia de red
+    await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
+
+    // Simular diferentes escenarios
+    const random = Math.random();
+    
+    // 5% de probabilidad de fallo para realismo
+    if (random < 0.05) {
+      return {
+        exitoso: false,
+        mensaje: 'Transacción rechazada por el banco',
+        error: 'DECLINED',
+        detalles: {
+          codigoError: 'INSUFFICIENT_FUNDS',
+          tiempoRespuesta: '2.1s'
+        }
+      };
+    }
+
+    // Procesamiento exitoso
+    const comision = Math.round(monto * 0.029); // 2.9% comisión
+    const autorizacion = Math.random().toString(36).substr(2, 8).toUpperCase();
+
+    return {
+      exitoso: true,
+      mensaje: 'Pago procesado exitosamente',
+      detalles: {
+        autorizacion,
+        comision,
+        tiempoRespuesta: '1.3s',
+        numeroTarjeta: PagoController.generarNumeroTarjetaTest(metodo)
+      }
+    };
+  }
+
+  /**
+   * Generar número de tarjeta de prueba
+   * @param {string} metodo - Método de pago
+   * @returns {string}
+   */
+  static generarNumeroTarjetaTest(metodo) {
+    const prefijos = {
+      'tarjeta_credito': ['4111', '5555'],
+      'tarjeta_debito': ['4000', '5200'],
+      'transferencia_bancaria': ['BANK']
+    };
+
+    const prefijo = prefijos[metodo] || ['4111'];
+    const prefijoSeleccionado = prefijo[Math.floor(Math.random() * prefijo.length)];
+    
+    if (metodo === 'transferencia_bancaria') {
+      return `${prefijoSeleccionado}-${Math.floor(Math.random() * 10000)}`;
+    }
+    
+    const sufijo = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `${prefijoSeleccionado}****${sufijo}`;
+  }
+
+  /**
    * Obtener estado de pago de una cita
    * @param {Object} req - Request object
    * @param {Object} res - Response object
    */
-  static async estadoPago(req, res) {
+  static async obtenerEstadoPago(req, res) {
     try {
       const { citaId } = req.params;
       const idPaciente = req.usuario.id;
 
-      // Verificar que la cita pertenece al paciente
-      const cita = await Cita.findOne({
-        where: { id: citaId, idPaciente }
+      const pago = await Pago.findOne({
+        where: { citaId },
+        include: [{
+          model: Cita,
+          as: 'cita',
+          where: { idPaciente }
+        }]
       });
 
-      if (!cita) {
+      if (!pago) {
         return res.status(404).json({
-          error: 'Cita no encontrada',
-          message: 'La cita no existe o no pertenece a este paciente'
+          error: 'Pago no encontrado',
+          message: 'No se encontró información de pago para esta cita'
         });
       }
 
-      // Buscar pagos relacionados
-      const pagos = await Pago.findAll({
-        where: { citaId },
-        order: [['createdAt', 'DESC']]
+      res.json({
+        pago: {
+          id: pago.id,
+          transaccionId: pago.transaccionId,
+          pagoEstado: pago.pagoEstado,
+          pagoMetodo: pago.pagoMetodo,
+          monto: pago.monto,
+          fechaPagado: pago.fechaPagado,
+          detallesRespuesta: pago.detallesRespuesta
+        }
       });
 
-      const paymentService = new PaymentService();
-      const estaPagada = await paymentService.citaEstaPagada(citaId);
+    } catch (error) {
+      console.error('Error obteniendo estado de pago:', error);
+      res.status(500).json({
+        error: 'Error interno del servidor',
+        message: 'No se pudo obtener el estado del pago'
+      });
+    }
+  }
+
+  /**
+   * Obtener historial de pagos del paciente
+   * @param {Object} req - Request object
+   * @param {Object} res - Response object
+   */
+  static async obtenerHistorialPagos(req, res) {
+    try {
+      const idPaciente = req.usuario.id;
+
+      const pagos = await Pago.findAll({
+        include: [{
+          model: Cita,
+          as: 'cita',
+          where: { idPaciente },
+          include: [{
+            model: Usuario,
+            as: 'medico',
+            attributes: ['nombre', 'apellido', 'especialidad']
+          }]
+        }],
+        order: [['fechaPagado', 'DESC']]
+      });
 
       res.json({
-        message: 'Estado de pago obtenido exitosamente',
-        cita: {
-          id: cita.id,
-          estado: cita.estado,
-          monto: cita.monto
-        },
-        estaPagada,
         pagos: pagos.map(pago => ({
           id: pago.id,
+          transaccionId: pago.transaccionId,
+          pagoEstado: pago.pagoEstado,
+          pagoMetodo: pago.pagoMetodo,
           monto: pago.monto,
-          estado: pago.pagoEstado,
-          metodo: pago.pagoMetodo,
-          fecha: pago.fechaPagado,
-          transaccionId: pago.transaccionId
+          fechaPagado: pago.fechaPagado,
+          cita: {
+            id: pago.cita.id,
+            fecha: pago.cita.citaFecha,
+            hora: pago.cita.citaHora,
+            estado: pago.cita.estado,
+            medico: pago.cita.medico
+          }
         }))
       });
 
     } catch (error) {
-      console.error('Error al obtener estado de pago:', error);
+      console.error('Error obteniendo historial de pagos:', error);
       res.status(500).json({
         error: 'Error interno del servidor',
-        message: 'No se pudo obtener el estado del pago'
+        message: 'No se pudo obtener el historial de pagos'
       });
     }
   }

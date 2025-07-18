@@ -1,77 +1,82 @@
 const jwt = require('jsonwebtoken');
-const Usuario = require('../models/Usuario');
+const { Usuario } = require('../models');
 
 /**
- * Middleware de autenticación JWT
- * Implementa el patrón Chain of Responsibility
+ * Middleware para verificar token JWT
+ * @param {Object} req - Request object
+ * @param {Object} res - Response object
+ * @param {Function} next - Next middleware function
  */
-class AuthMiddleware {
-  /**
-   * Verificar token JWT
-   * @param {Object} req - Request object
-   * @param {Object} res - Response object
-   * @param {Function} next - Next middleware
-   */
-  static async authenticateToken(req, res, next) {
-    try {
-      // Obtener token del header Authorization o query parameter
-      const authHeader = req.headers['authorization'];
-      const token = authHeader && authHeader.split(' ')[1] || req.query.token;
-
-      if (!token) {
-        return res.status(401).json({
-          error: 'Acceso denegado',
-          message: 'No se proporcionó un token'
-        });
-      }
-
-      // Verificar token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
-      // Buscar usuario en la base de datos
-      const usuario = await Usuario.findByPk(decoded.id);
-      if (!usuario || !usuario.isActive) {
-        return res.status(401).json({
-          error: 'Acceso denegado',
-          message: 'Usuario no encontrado o inactivo'
-        });
-      }
-
-      req.usuario = usuario;
-      next();
-
-    } catch (error) {
-      return res.status(403).json({
-        error: 'Token invalido',
-        message: 'El token proporcionado es inválido o ha expirado'
+const verificarToken = async (req, res, next) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({
+        error: 'Acceso denegado',
+        message: 'No se proporcionó token de autenticación'
       });
     }
-  }
 
-  /**
-   * Verificar roles de usuario
-   * @param {Array} rolesPermitidos 
-   * @returns {Function}
-   */
-  static authorizeRole(allowedRoles) {
-    return (req, res, next) => {
-      if (!req.usuario) {
-        return res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Usuario no autenticado'
-        });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'tu_jwt_secret_aqui');
+    
+    // Verificar que el usuario existe 
+    const usuario = await Usuario.findOne({ 
+      where: { 
+        id: decoded.id,
+        correo: decoded.correo 
       }
+    });
+    
+    if (!usuario) {
+      return res.status(401).json({
+        error: 'Token inválido',
+        message: 'El usuario no existe'
+      });
+    }
 
-      if (!allowedRoles.includes(req.usuario.rol)) {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Permisos insuficientes'
-        });
-      }
-
-      next();
+    req.usuario = {
+      id: usuario.id,
+      correo: usuario.correo, 
+      rol: usuario.rol
     };
-  }
-}
 
-module.exports = AuthMiddleware;
+    next();
+  } catch (error) {
+    console.error('Error verificando token:', error);
+    return res.status(401).json({
+      error: 'Token inválido',
+      message: 'Token expirado o inválido'
+    });
+  }
+};
+
+/**
+ * Middleware para verificar rol de usuario
+ * @param {Array} rolesPermitidos - Roles que tienen acceso
+ * @returns {Function} Middleware function
+ */
+const verificarRol = (rolesPermitidos) => {
+  return (req, res, next) => {
+    if (!req.usuario) {
+      return res.status(401).json({
+        error: 'Acceso denegado',
+        message: 'Usuario no autenticado'
+      });
+    }
+
+    if (!rolesPermitidos.includes(req.usuario.rol)) {
+      return res.status(403).json({
+        error: 'Acceso denegado',
+        message: 'No tienes permisos para acceder a este recurso'
+      });
+    }
+
+    next();
+  };
+};
+
+module.exports = {
+  verificarToken,
+  verificarRol
+};

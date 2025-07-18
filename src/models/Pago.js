@@ -11,14 +11,14 @@ const Pago = sequelize.define('Pago', {
     primaryKey: true,
     autoIncrement: true
   },
-  citaId: {  
+  citaId: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    field: 'id_cita',
     references: {
       model: 'citas',
       key: 'id'
-    }
+    },
+    field: 'cita_id'
   },
   monto: {
     type: DataTypes.DECIMAL(10, 2),
@@ -27,28 +27,28 @@ const Pago = sequelize.define('Pago', {
   pagoMetodo: {
     type: DataTypes.ENUM('tarjeta_credito', 'tarjeta_debito', 'transferencia_bancaria'),
     allowNull: false,
-    field: 'metodo_pago'
+    field: 'pago_metodo'
   },
   pagoEstado: {
-    type: DataTypes.ENUM('pendiente', 'pagado', 'confirmado', 'cancelado', 'completado'),
-    allowNull: false,
+    type: DataTypes.ENUM('pendiente', 'completado', 'fallido'),
     defaultValue: 'pendiente',
-    field: 'estado_pago'
+    allowNull: false
   },
   transaccionId: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    field: 'id_transaccion'
-  },
-  gatewayResponse: {
-    type: DataTypes.JSON,
-    allowNull: true,
-    field: 'gateway_response'
+    type: DataTypes.STRING(50),
+    allowNull: false,
+    unique: true,
+    field: 'transaccion_id'
   },
   fechaPagado: {
     type: DataTypes.DATE,
+    allowNull: false,
+    field: 'fecha_pagado'
+  },
+  detallesRespuesta: {
+    type: DataTypes.TEXT,
     allowNull: true,
-    field: 'pago_fecha'
+    field: 'detalles_respuesta'
   }
 }, {
   tableName: 'pagos',

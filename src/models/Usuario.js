@@ -11,62 +11,49 @@ const Usuario = sequelize.define('Usuario', {
     primaryKey: true,
     autoIncrement: true
   },
+  nombre: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
+  apellido: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
   correo: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(255),
     allowNull: false,
     unique: true,
     validate: {
-      esCorreo: true
+      isEmail: true
     }
   },
   password: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    validate: {
-      len: [6, 255]
-    }
-  },
-  nombre: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    field: 'nombre'
-  },
-  apellido: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    field: 'apellido'
+    type: DataTypes.STRING(255),
+    allowNull: false
   },
   fono: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    validate: {
-      isNumeric: true,
-      len: [10, 15]
-    }
+    type: DataTypes.STRING(20),
+    allowNull: true
   },
   rol: {
     type: DataTypes.ENUM('paciente', 'medico'),
     allowNull: false,
     defaultValue: 'paciente'
   },
-  isActive: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: true,
-    field: 'is_active'
-  },
-  // Campos específico para médico
   especialidad: {
-    type: DataTypes.STRING,
+    type: DataTypes.STRING(100),
     allowNull: true
-  },
+  }
 }, {
-  tableName: 'usuarios', 
+  tableName: 'usuarios',
   timestamps: true,
   underscored: true,
   hooks: {
     beforeCreate: async (usuario) => {
+      console.log('Hook beforeCreate ejecutado para:', usuario.correo);
       if (usuario.password) {
         usuario.password = await bcrypt.hash(usuario.password, 10);
+        console.log('Contraseña hasheada exitosamente');
       }
     },
     beforeUpdate: async (usuario) => {
@@ -79,16 +66,20 @@ const Usuario = sequelize.define('Usuario', {
 
 /**
  * Método para validar contraseña
- * @param {string} password 
- * @returns {Promise<boolean>}
  */
 Usuario.prototype.validatePassword = async function(password) {  
-  return await bcrypt.compare(password, this.password);
+  console.log('Validando contraseña para:', this.correo);
+  console.log('Contraseña ingresada:', password);
+  console.log('Hash almacenado:', this.password);
+  
+  const isValid = await bcrypt.compare(password, this.password);
+  console.log('Contraseña válida:', isValid);
+  
+  return isValid;
 };
 
 /**
  * Método para obtener datos públicos del usuario
- * @returns {Object}
  */
 Usuario.prototype.toPublicJSON = function() {  
   return {

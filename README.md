@@ -48,7 +48,7 @@ ptecnica-pp/
     └── seed-data.sql             # Datos iniciales
 ```
 
-## 🚀 Tecnologías Utilizadas
+## Tecnologías Utilizadas
 
 ### Backend
 
@@ -87,7 +87,7 @@ cd ptecnica-pp
 
 #### Opción A: Configuración Automatizada con Node.js (De esta forma lo hice yo por ser Node.js)
 
-El proyecto incluye **configuración automatizada** de la base de datos usando **Sequelize ORM** y **Node.js**. Solo necesitas:
+El proyecto incluye **configuración automatizada** de la base de datos usando **Sequelize ORM** y **Node.js**. Solo necesita:
 
 1. **Crear la base de datos y usuario en PostgreSQL:**
 
@@ -128,30 +128,72 @@ El proyecto incluye **configuración automatizada** de la base de datos usando *
    DB_HOST=localhost
    DB_PORT=5432
 
-   # JWT - IMPORTANTE: Cambia esta clave en producción
-   JWT_SECRET=mi_clave_jwt_super_secreta_y_segura_2025_ptecnica_pp
+   # JWT - Cambiar en producción
+   JWT_SECRET=clave_jwt__secreta
 
    # Servidor
    PORT=3000
    NODE_ENV=development
    FRONTEND_URL=http://localhost:3001
+
+   # Payment (parte de la simulación del sandbox)
+   PAYMENT_API_KEY=sandbox_123
+
    ```
 
-3. **Ejecutar el servidor** - Las tablas se crearán automáticamente:
+3. **Ejecutar el servidor** - Las tablas se crearán automáticamente (explicado después):
 
    ```bash
    npm install
    npm run dev
    ```
 
-✅ **Ventajas de la configuración automatizada:**
+   **¿Cómo funciona la creación automática?**
+
+   El proyecto incluye scripts automatizados en la carpeta `database/`:
+
+   - `database/create-tables.js` - Crea las tablas usando Sequelize
+   - `database/seed.js` - Inserta datos de prueba
+
+   También puedes ejecutar estos scripts manualmente:
+
+   ```bash
+   # Crear tablas manualmente
+   npm run db:create
+
+   # Insertar datos de prueba manualmente
+   npm run db:seed
+
+   # Recrear BD completa
+   npm run db:reset
+   ```
+
+   **Scripts disponibles en `package.json`:**
+
+   ```json
+   {
+     "scripts": {
+       "db:create": "node database/create-tables.js",
+       "db:seed": "node database/seed.js",
+       "db:reset": "npm run db:create && npm run db:seed"
+     }
+   }
+   ```
+
+   **Datos de prueba incluidos:**
+
+   - 2 médicos: `medico1@hospital.cl` / `medico2@hospital.cl`
+   - 2 pacientes: `paciente1@gmail.com` / `paciente2@gmail.com`
+   - Contraseña para todos: `password123`
+
+   **Ventajas de la configuración automatizada:**
 
 - Las tablas se crean automáticamente con `sequelize.sync()`
 - Los datos de prueba se insertan automáticamente
 - No necesitas ejecutar scripts SQL manualmente
 - Sincronización automática de cambios en los modelos
 
-#### Opción B: Scripts SQL Manuales (Requerimiento técnico)
+#### Opción B: Scripts SQL Manuales:
 
 Por los **requerimientos de entrega**, también se proporcionan los scripts SQL tradicionales:
 
@@ -250,14 +292,16 @@ SELECT 'Tablas creadas exitosamente' AS mensaje;
 -- Limpiar datos existentes (opcional)
 TRUNCATE TABLE pagos, citas, usuarios RESTART IDENTITY CASCADE;
 
+-- IMPORTANTE: Las contraseñas deben ser hasheadas por la aplicación Node.js
+-- En este script SQL hay una 'simulacion' del hash para que pueda logearse basicamente, si no es cosa de registrarse por el sistema ya que las contraseñas se hashean automáticamente en el controlador
+
 -- Insertar usuarios de prueba
 INSERT INTO usuarios (nombre, apellido, correo, password, fono, rol, especialidad) VALUES
--- Pacientes (password: 123456 hasheado con bcrypt)
+-- Pacientes (password: 123456 → hash generado previamente)
 ('Juan', 'Pérez', 'paciente@test.com', '$2b$10$rOYNmTTpPJoGKQbOzHqYneZeNsHRrjvHnZhIyHK7zBqnIkqtqfR3a', '912345678', 'paciente', NULL),
 ('María', 'González', 'maria@test.com', '$2b$10$rOYNmTTpPJoGKQbOzHqYneZeNsHRrjvHnZhIyHK7zBqnIkqtqfR3a', '987654321', 'paciente', NULL),
-('Carlos', 'Rodríguez', 'carlos@test.com', '$2b$10$rOYNmTTpPJoGKQbOzHqYneZeNsHRrjvHnZhIyHK7zBqnIkqtqfR3a', '956789123', 'paciente', NULL),
 
--- Médicos (password: 123456 hasheado con bcrypt)
+-- Médicos (password: 123456 → hash generado previamente)
 ('Dr. Ana', 'López', 'medico@test.com', '$2b$10$rOYNmTTpPJoGKQbOzHqYneZeNsHRrjvHnZhIyHK7zBqnIkqtqfR3a', '934567890', 'medico', 'Cardiología'),
 ('Dr. Luis', 'Martínez', 'luis@test.com', '$2b$10$rOYNmTTpPJoGKQbOzHqYneZeNsHRrjvHnZhIyHK7zBqnIkqtqfR3a', '923456789', 'medico', 'Pediatría'),
 ('Dra. Carmen', 'Silva', 'carmen@test.com', '$2b$10$rOYNmTTpPJoGKQbOzHqYneZeNsHRrjvHnZhIyHK7zBqnIkqtqfR3a', '945678901', 'medico', 'Ginecología');
@@ -265,7 +309,7 @@ INSERT INTO usuarios (nombre, apellido, correo, password, fono, rol, especialida
 -- Insertar citas de ejemplo
 INSERT INTO citas (id_paciente, id_medico, cita_fecha, cita_hora, razon, monto, estado) VALUES
 (1, 4, '2025-07-20', '09:00', 'Consulta general', 50000, 'pendiente'),
-(2, 5, '2025-07-20', '10:30', 'Control niño sano', 45000, 'pendiente'),
+(2, 5, '2025-07-20', '10:30', 'Control niño', 45000, 'pendiente'),
 (3, 6, '2025-07-21', '15:00', 'Control ginecológico', 60000, 'pagado'),
 (1, 4, '2025-07-22', '08:30', 'Seguimiento cardiológico', 55000, 'confirmado');
 
@@ -278,7 +322,13 @@ INSERT INTO pagos (cita_id, monto, pago_metodo, pago_estado, transaccion_id, fec
 SELECT 'Datos de prueba insertados exitosamente' AS mensaje;
 ```
 
-**Ejecutar scripts SQL manualmente (si es necesario):**
+```javascript
+// En el controlador AuthController.js - Hasheo automático
+const saltRounds = 10;
+const hashedPassword = await bcrypt.hash(password, saltRounds);
+```
+
+### Ejecutar scripts SQL manualmente (si es necesario):
 
 ```bash
 # Ejecutar script de creación de tablas
@@ -412,7 +462,7 @@ initDB();
 
 ### Calidad y Arquitectura del Código
 
-El proyecto implementa una **arquitectura en capas** siguiendo las mejores prácticas:
+El proyecto implementa una **arquitectura en capas** (la estructura completa la mostre al principio)
 
 - **Separación de responsabilidades**: Controladores, modelos, rutas y middleware
 - **Programación Orientada a Objetos**: Uso de clases y métodos estáticos
@@ -436,12 +486,12 @@ ptecnica-pp/
 └── docs/                 # Documentación adicional
 ```
 
-### 🎯 Patrones de Diseño Implementados
+### Patrones de Diseño Implementados
 
 #### 1. **Patrón MVC (Model-View-Controller)**
 
 ```javascript
-// Controlador: Maneja la lógica de negocio
+// Controlador: Maneja la lógica
 class AuthController {
   static async login(req, res) {
     // Lógica de autenticación
@@ -736,3 +786,23 @@ const validarHorarioAtencion = (hora) => {
 5. Marco citas como completadas
 
 > **Resultado**: API RESTful completa con POO, validaciones, sistema de pagos sandbox y gestión de roles.
+
+### 🔒 Explicación del Hasheo de Contraseñas
+
+**¿Por qué bcrypt?**
+
+- bcrypt es una función criptográfica que genera hashes seguros
+- Cada vez que se hashea la misma contraseña, genera un resultado diferente (salt)
+- Es computacionalmente costoso, lo que previene ataques de fuerza bruta
+
+**¿Cómo funciona en el proyecto?**
+
+```javascript
+// 1. Al registrarse, la contraseña se hashea automáticamente
+const hashedPassword = await bcrypt.hash("123456", 10);
+// Resultado: $2b$10$rOYNmTTpPJoGKQbOzHqYneZeNsHRrjvHnZhIyHK7zBqnIkqtqfR3a
+
+// 2. Al hacer login, se compara el hash
+const esValida = await bcrypt.compare("123456", hashedPassword);
+// Resultado: true o false
+```
